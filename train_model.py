@@ -17,6 +17,19 @@ def clean_text(text):
     text = re.sub(r'[^a-zA-Z ]', '', text)
     return re.sub(r'\\s+', ' ', text).strip()
 
+# Function to train, evaluate, and visualize a model
+def train_and_evaluate(model_name, model, X_vec, y):
+    model.fit(X_vec, y)
+    y_pred = model.predict(X_vec)
+    acc = accuracy_score(y, y_pred)
+    print(f"{model_name} Accuracy: {acc:.4f}")
+
+    cm = confusion_matrix(y, y_pred)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Real", "Fake"])
+    disp.plot(cmap=plt.cm.Blues)
+    plt.title(f"Confusion Matrix - {model_name}")
+    plt.show()
+
 # Load and clean data
 df = pd.read_csv("train.csv")
 df['text'] = df['text'].apply(clean_text)
@@ -36,15 +49,6 @@ models = {
     "XGBoost": XGBClassifier(use_label_encoder=False, eval_metric='logloss')
 }
 
-# Train, evaluate, and visualize each model
-for name, model in models.items():
-    model.fit(X_vec, y)
-    y_pred = model.predict(X_vec)
-    acc = accuracy_score(y, y_pred)
-    print(f"{name} Accuracy: {acc:.4f}")
-
-    cm = confusion_matrix(y, y_pred)
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Real", "Fake"])
-    disp.plot(cmap=plt.cm.Blues)
-    plt.title(f"Confusion Matrix - {name}")
-    plt.show()
+# Loop through models
+for name, mdl in models.items():
+    train_and_evaluate(name, mdl, X_vec, y)
