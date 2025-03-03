@@ -1,5 +1,6 @@
 import pandas as pd
 import re
+import pickle
 import matplotlib.pyplot as plt
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -29,6 +30,7 @@ def train_and_evaluate(model_name, model, X_vec, y):
     disp.plot(cmap=plt.cm.Blues)
     plt.title(f"Confusion Matrix - {model_name}")
     plt.show()
+    return model
 
 # Load and clean data
 df = pd.read_csv("train.csv")
@@ -49,6 +51,18 @@ models = {
     "XGBoost": XGBClassifier(use_label_encoder=False, eval_metric='logloss')
 }
 
-# Loop through models
+best_model = None
+best_acc = 0
+
+# Loop through models, pick best
 for name, mdl in models.items():
-    train_and_evaluate(name, mdl, X_vec, y)
+    trained = train_and_evaluate(name, mdl, X_vec, y)
+    acc = accuracy_score(y, trained.predict(X_vec))
+    if acc > best_acc:
+        best_acc = acc
+        best_model = trained
+
+# Save best model and vectorizer
+pickle.dump(best_model, open("best_model.pkl", "wb"))
+pickle.dump(vectorizer, open("vectorizer.pkl", "wb"))
+print(f"Saved best model with accuracy: {best_acc:.4f}")
