@@ -39,8 +39,8 @@ df['text'] = df['text'].apply(clean_text)
 X = df['text']
 y = df['label']
 
-# Vectorize text
-vectorizer = TfidfVectorizer()
+# Vectorize text with optimized params
+vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1,2))
 X_vec = vectorizer.fit_transform(X)
 
 # Define models
