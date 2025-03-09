@@ -25,6 +25,7 @@ def train_and_evaluate(model_name, model, X_vec, y):
     acc = accuracy_score(y, y_pred)
     print(f"{model_name} Accuracy: {acc:.4f}")
 
+    # Display confusion matrix
     cm = confusion_matrix(y, y_pred)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Real", "Fake"])
     disp.plot(cmap=plt.cm.Blues)
@@ -32,37 +33,41 @@ def train_and_evaluate(model_name, model, X_vec, y):
     plt.show()
     return model
 
-# Load and clean data
-df = pd.read_csv("train.csv")
-df['text'] = df['text'].apply(clean_text)
+def main():
+    # Load and clean data
+    df = pd.read_csv("train.csv")
+    df['text'] = df['text'].apply(clean_text)
 
-X = df['text']
-y = df['label']
+    X = df['text']
+    y = df['label']
 
-# Vectorize text with optimized params
-vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1,2))
-X_vec = vectorizer.fit_transform(X)
+    # Vectorize text with optimized params
+    vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1,2))
+    X_vec = vectorizer.fit_transform(X)
 
-# Define models
-models = {
-    "LogisticRegression": LogisticRegression(max_iter=1000),
-    "DecisionTree": DecisionTreeClassifier(),
-    "RandomForest": RandomForestClassifier(),
-    "XGBoost": XGBClassifier(use_label_encoder=False, eval_metric='logloss')
-}
+    # Define models
+    models = {
+        "LogisticRegression": LogisticRegression(max_iter=1000),
+        "DecisionTree": DecisionTreeClassifier(),
+        "RandomForest": RandomForestClassifier(),
+        "XGBoost": XGBClassifier(use_label_encoder=False, eval_metric='logloss')
+    }
 
-best_model = None
-best_acc = 0
+    best_model = None
+    best_acc = 0
 
-# Loop through models, pick best
-for name, mdl in models.items():
-    trained = train_and_evaluate(name, mdl, X_vec, y)
-    acc = accuracy_score(y, trained.predict(X_vec))
-    if acc > best_acc:
-        best_acc = acc
-        best_model = trained
+    # Loop through models, pick best
+    for name, mdl in models.items():
+        trained = train_and_evaluate(name, mdl, X_vec, y)
+        acc = accuracy_score(y, trained.predict(X_vec))
+        if acc > best_acc:
+            best_acc = acc
+            best_model = trained
 
-# Save best model and vectorizer
-pickle.dump(best_model, open("best_model.pkl", "wb"))
-pickle.dump(vectorizer, open("vectorizer.pkl", "wb"))
-print(f"Saved best model with accuracy: {best_acc:.4f}")
+    # Save best model and vectorizer
+    pickle.dump(best_model, open("best_model.pkl", "wb"))
+    pickle.dump(vectorizer, open("vectorizer.pkl", "wb"))
+    print(f"Saved best model with accuracy: {best_acc:.4f}")
+
+if __name__ == "__main__":
+    main()
