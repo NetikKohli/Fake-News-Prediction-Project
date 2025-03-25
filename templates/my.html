@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>Fake News Detector</title>
@@ -8,8 +8,14 @@
   <h1>Fake News Detector</h1>
   <form method="POST" action="/">
     <label for="title">News Title:</label>
-    <input type="text" id="title" name="title" required />
+    <input type="text" id="title" name="title" value="{{ title }}" required />
     <button type="submit">Check</button>
   </form>
+
+  {% if result %}
+    <div>
+      <strong>Prediction:</strong> {{ result }}
+    </div>
+  {% endif %}
 </body>
 </html>
