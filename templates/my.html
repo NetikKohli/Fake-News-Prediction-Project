@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Fake News Detector</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <h1>Fake News Detector</h1>
@@ -13,7 +14,7 @@
   </form>
 
   {% if result %}
-    <div>
+    <div class="prediction">
       <strong>Prediction:</strong> {{ result }}
     </div>
   {% endif %}
