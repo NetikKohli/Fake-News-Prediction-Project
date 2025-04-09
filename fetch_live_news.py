@@ -60,8 +60,36 @@ def fetch_real_news_for_date(date_str):
         time.sleep(1)
     return all_texts
 
+def fetch_fake_news_for_date(date_str):
+    all_texts = []
+    for page in range(1, 6):
+        articles = fetch_page(
+            api_key=API_KEY,
+            topic="hoax OR fake OR misinformation OR conspiracy OR rumor",
+            from_date=date_str + "T00:00:00",
+            to_date=date_str + "T23:59:59",
+            page=page,
+            domains=None
+        )
+        if not articles:
+            break
+        for art in articles:
+            title = art.get("title") or ""
+            desc  = art.get("description") or ""
+            content = clean_text(title + " " + desc)
+            if content:
+                all_texts.append(content)
+        if len(articles) < PAGE_SIZE:
+            break
+        time.sleep(1)
+    return all_texts
+
 if __name__ == "__main__":
     today = datetime.utcnow().date()
     date_str = today.strftime("%Y-%m-%d")
+
     real_texts = fetch_real_news_for_date(date_str)
     print(f"Fetched {len(real_texts)} real news articles for {date_str}")
+
+    fake_texts = fetch_fake_news_for_date(date_str)
+    print(f"Fetched {len(fake_texts)} fake news articles for {date_str}")
