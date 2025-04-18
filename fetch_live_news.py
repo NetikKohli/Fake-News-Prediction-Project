@@ -71,6 +71,7 @@ def save_deduplicated_csv(filename, new_texts, label):
         combined_df = pd.concat([existing_df, new_df], ignore_index=True)
     else:
         combined_df = new_df
+    # Prevent duplicates by 'text'
     combined_df.drop_duplicates(subset='text', inplace=True)
     combined_df.to_csv(filename, index=False)
     print(f"Saved {len(new_texts)} new articles to {filename} (Total: {len(combined_df)})")
