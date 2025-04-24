@@ -2,6 +2,7 @@ import requests
 import pandas as pd
 import re
 import time
+import pickle
 from datetime import datetime, timedelta
 import os
 
@@ -9,6 +10,11 @@ API_KEY = "3c9777379ed746e8be4d6bb228c85822"
 PAGE_SIZE = 100
 REAL_CSV = "real_news.csv"
 FAKE_CSV = "fake_news.csv"
+PRED_CSV = "live_predictions.csv"
+
+# Load model and vectorizer from Phase 1
+model = pickle.load(open("best_model.pkl", "rb"))
+vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
 
 def clean_text(text):
     if not text:
@@ -41,7 +47,7 @@ def fetch_page(api_key, topic, from_date, to_date, page, domains=None):
     return data.get("articles", [])
 
 def fetch_day(api_key, topic, date_str, domains=None):
-    all_texts = []
+    all_articles = []
     for page in range(1, 6):
         articles = fetch_page(
             api_key=api_key,
@@ -58,45 +64,68 @@ def fetch_day(api_key, topic, date_str, domains=None):
             desc  = art.get("description") or ""
             content = clean_text(title + " " + desc)
             if len(content.split()) > 5:
-                all_texts.append(content)
+                all_articles.append({
+                    "text": content,
+                    "publishedAt": art.get("publishedAt", "")
+                })
         if len(articles) < PAGE_SIZE:
             break
         time.sleep(1)
-    return all_texts
+    return all_articles
 
-def save_deduplicated_csv(filename, new_texts, label):
-    new_df = pd.DataFrame({'text': new_texts, 'label': label})
+def save_deduplicated_csv(filename, df_new):
     if os.path.exists(filename):
         existing_df = pd.read_csv(filename)
-        combined_df = pd.concat([existing_df, new_df], ignore_index=True)
+        combined_df = pd.concat([existing_df, df_new], ignore_index=True)
     else:
-        combined_df = new_df
-    # Prevent duplicates by 'text'
+        combined_df = df_new
     combined_df.drop_duplicates(subset='text', inplace=True)
     combined_df.to_csv(filename, index=False)
-    print(f"Saved {len(new_texts)} new articles to {filename} (Total: {len(combined_df)})")
+    print(f"Saved to {filename} (Total: {len(combined_df)})")
 
-def save_news_to_csv():
+def save_news_and_predict():
     today = datetime.utcnow().date()
     date_str = today.strftime("%Y-%m-%d")
 
-    print("=== Fetching REAL news ===")
-    real_texts = fetch_day(
+    # Fetch real news
+    real_articles = fetch_day(
         API_KEY,
         topic="technology OR politics OR science",
         date_str=date_str,
         domains="bbc.com,cnn.com,nytimes.com,reuters.com"
     )
-    save_deduplicated_csv(REAL_CSV, real_texts, label=0)
+    if real_articles:
+        df_real = pd.DataFrame(real_articles)
+        df_real["label"] = 0
+        save_deduplicated_csv(REAL_CSV, df_real[["text", "label"]])
 
-    print("\\n=== Fetching FAKE news ===")
-    fake_texts = fetch_day(
+    # Fetch fake news
+    fake_articles = fetch_day(
         API_KEY,
         topic="hoax OR fake OR misinformation OR conspiracy OR rumor",
         date_str=date_str,
         domains=None
     )
-    save_deduplicated_csv(FAKE_CSV, fake_texts, label=1)
+    if fake_articles:
+        df_fake = pd.DataFrame(fake_articles)
+        df_fake["label"] = 1
+        save_deduplicated_csv(FAKE_CSV, df_fake[["text", "label"]])
+
+    # Combine and predict on all new texts
+    combined = []
+    if os.path.exists(REAL_CSV):
+        combined.append(pd.read_csv(REAL_CSV))
+    if os.path.exists(FAKE_CSV):
+        combined.append(pd.read_csv(FAKE_CSV))
+    if combined:
+        df_all = pd.concat(combined, ignore_index=True).drop_duplicates(subset='text')
+        texts = df_all["text"].tolist()
+        vecs = vectorizer.transform(texts)
+        preds = model.predict(vecs)
+        df_all["prediction"] = preds
+        df_all["prediction_str"] = df_all["prediction"].apply(lambda x: "Real" if x == 0 else "Fake")
+        df_all.to_csv(PRED_CSV, index=False)
+        print(f"Saved live predictions to {PRED_CSV} (Total: {len(df_all)})")
 
 if __name__ == "__main__":
-    save_news_to_csv()
+    save_news_and_predict()
