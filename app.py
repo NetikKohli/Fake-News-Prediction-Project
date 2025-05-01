@@ -1,37 +1,61 @@
 import pickle
-from flask import Flask, request, jsonify
+import pandas as pd
+import re
+from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
 
-# Load trained model and vectorizer
+# Load trained model and vectorizer (Phase 1)
 try:
     model = pickle.load(open("best_model.pkl", "rb"))
     vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
 except Exception as e:
-    print(f"Error loading model or vectorizer: {e}")
+    print(f"Error loading model/vectorizer: {e}")
     model = None
     vectorizer = None
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    if model is None or vectorizer is None:
-        return jsonify({"error": "Model not available"}), 500
+def clean_text(text):
+    if not isinstance(text, str):
+        return ""
+    text = re.sub(r'https?://\\S+|www\\.\\S+', '', text.lower())
+    text = re.sub(r'<.*?>', '', text)
+    text = re.sub(r'[^a-zA-Z ]', '', text)
+    return re.sub(r'\\s+', ' ', text).strip()
 
-    data = request.get_json(silent=True)
-    if not data or "text" not in data:
-        return jsonify({"error": "Invalid input, 'text' field is required"}), 400
+@app.route("/", methods=["GET", "POST"])
+def index():
+    result = None
+    title = author = content = ""
+    if request.method == "POST":
+        title = request.form.get("title", "")
+        author = request.form.get("author", "")
+        content = request.form.get("content", "")
+        combined_text = f"{title} {author} {content}"
+        cleaned = clean_text(combined_text)
+        vectorized = vectorizer.transform([cleaned])
+        prediction = model.predict(vectorized)[0]
+        result = "Real News" if prediction == 0 else "Fake News"
 
-    text = data.get('text', '')
+    # Load live predictions (if available)
+    live_results = []
     try:
-        vec = vectorizer.transform([text])
-        pred = model.predict(vec)[0]
-        label_str = "Real" if pred == 0 else "Fake"
-        return jsonify({
-            "label": int(pred),
-            "prediction": label_str
-        })
-    except Exception as ex:
-        return jsonify({"error": f"Prediction failed: {ex}"}), 500
+        df_live = pd.read_csv("live_predictions.csv")
+        # Take the latest 10 for display
+        df_show = df_live.sort_values(by="text").tail(10)
+        for _, row in df_show.iterrows():
+            live_results.append({
+                "text": row["text"],
+                "prediction": row["prediction_str"]
+            })
+    except Exception:
+        live_results = []
 
-if __name__ == '__main__':
+    return render_template("my.html",
+                           result=result,
+                           title=title,
+                           author=author,
+                           content=content,
+                           live_results=live_results)
+
+if __name__ == "__main__":
     app.run(debug=True)

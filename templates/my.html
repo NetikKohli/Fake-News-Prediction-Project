@@ -47,5 +47,21 @@
     </div>
   {% endif %}
 
+  {% if live_results %}
+    <div class="mt-10 max-w-4xl w-full glass p-6">
+      <h2 class="text-2xl font-bold text-indigo-400 mb-4">Latest Live Predictions</h2>
+      <ul class="space-y-2">
+        {% for item in live_results %}
+          <li class="p-3 bg-gray-800 rounded-lg">
+            <span class="block font-medium">{{ item.text }}</span>
+            <span class="text-sm mt-1 {% if item.prediction == 'Real' %}text-green-400{% else %}text-red-400{% endif %}">
+              {{ item.prediction }}
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
 </body>
 </html>
