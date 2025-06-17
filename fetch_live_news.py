@@ -3,10 +3,9 @@ import pandas as pd
 import re
 import time
 from datetime import datetime, timedelta
-import os  # <- Added this import
+import os 
 
 # Constants
-API_KEY = "301d9ab6cef54d858ecb8dea1e0f6ea1"
 PAGE_SIZE = 100
 REAL_CSV = "real_news.csv"
 FAKE_CSV = "fake_news.csv"
